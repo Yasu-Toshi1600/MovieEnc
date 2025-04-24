@@ -64,3 +64,4 @@ C:\Users\anxil\Desktop\SampleApp\obj\Debug\net9.0\refint\Avalonia\SampleApp.dll
 C:\Users\anxil\Desktop\SampleApp\obj\Debug\net9.0\SampleApp.csproj.Up2Date
 C:\Users\anxil\Desktop\SampleApp\obj\Debug\net9.0\SampleApp.genruntimeconfig.cache
 C:\Users\anxil\Desktop\SampleApp\obj\Debug\net9.0\ref\SampleApp.dll
+C:\Users\anxil\Desktop\SampleApp\obj\Debug\net9.0\SampleApp.sourcelink.json

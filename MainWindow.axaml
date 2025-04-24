@@ -2,11 +2,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="490" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="490" d:DesignHeight="490"
         x:Class="SampleApp.MainWindow"
-        Width="490"
+        Width="493"
         Title="SampleApp"
-        
         Background="#f3f3f3">
         <StackPanel>
         <Grid >
@@ -25,7 +24,7 @@
                         Width="460"
                         VerticalAlignment="Top"
                         HorizontalAlignment="Left"
-                        Margin="16,32,0,0">
+                        Margin="16,44,0,0">
                         
                         <StackPanel >
                                 <TextBlock Text="動画ファイルを選択:" FontFamily="Yu Gothic UI"  />
@@ -38,6 +37,11 @@
                                         Click="file_ref" 
                                                 Margin="8,0,0,0"
                                                 Width="80"
+                                                Background="#ffffff"
+                                                BorderThickness="1,1,1,2"
+                                                CornerRadius="6"
+                                                
+                                                BorderBrush="#ddd"
                                                 HorizontalContentAlignment="Center"/>
                                 </DockPanel>
                         </StackPanel>
@@ -58,7 +62,11 @@
                                                 Width="350" 
                                                 IsReadOnly="True"/>
                                         <Button Content="参照" 
-                                                Click="folder_ref" 
+                                                Click="folder_ref"
+                                                Background="#ffffff"
+                                                CornerRadius="6"
+                                                BorderThickness="1,1,1,2"
+                                                BorderBrush="#ddd"
                                                 Margin="8,0,0,0"
                                                 Width="80"
                                                 HorizontalContentAlignment="Center"/>
@@ -67,7 +75,7 @@
                 </Border>
                 <Label Content="動画ファイル設定" 
                        FontWeight="Bold"
-                       Margin="16,8,0,0"></Label>
+                       Margin="16,16,0,0"></Label>
         </Grid>
         <Grid>
                 <Grid.RowDefinitions>
@@ -82,13 +90,76 @@
                         Padding="10"
                         BorderThickness="1"
                         BorderBrush="#ddd"
-                        DragDrop.AllowDrop="True"
                         Width="460"
                         VerticalAlignment="Top"
                         HorizontalAlignment="Left"
-                        Margin="16,40,0,0"
-                ></Border>
+                        Margin="16,44,0,0">
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                                <TextBlock Text="エンコード品質       "
+                                           VerticalAlignment="Center"/>
+                                <RadioButton Content="1080p" GroupName="EncodeOption"/>
+                                <RadioButton Content="720p" GroupName="EncodeOption"/>
+                                <RadioButton Content="480p" GroupName="EncodeOption"/>
+                                <RadioButton Content="9.5MB" GroupName="EncodeOption"/>
+                        </StackPanel>
+                </Border>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                        <Border  
+                                Background="#ffffff"
+                                CornerRadius="6"
+                                Padding="10"
+                                BorderThickness="1"
+                                BorderBrush="#ddd"
+                                Width="226"
+                                VerticalAlignment="Top"
+                                HorizontalAlignment="Left"
+                                Margin="16,4,0,0">
+                                <DockPanel VerticalAlignment="Center" Margin="0,0">
+                                        <TextBlock Text="NVENCを使用する"
+                                                   VerticalAlignment="Center"/>
+                                        <ToggleSwitch x:Name="NVEncS"
+                                                      IsChecked="True"
+                                                      VerticalAlignment="Stretch"
+                                                      HorizontalAlignment="Right"
+                                                      Margin="46,0,8,0"/>
+                                
+                                </DockPanel>
+                        </Border>
+                        <Border Background="#ffffff"
+                                CornerRadius="6"
+                                Padding="10"
+                                BorderThickness="1"
+                                BorderBrush="#ddd"
+                                Width="226"
+                                VerticalAlignment="Top"
+                                HorizontalAlignment="Right"
+                                Margin="0,4,0,0">
+                                <DockPanel VerticalAlignment="Center" Margin="0,0">
+                                        <TextBlock Text="自動エンコード"
+                                                   VerticalAlignment="Center"/>
+                                        <ToggleSwitch x:Name="AutoES"
+                                                      IsChecked="True"
+                                                      VerticalAlignment="Stretch"
+                                                      HorizontalAlignment="Right"
+                                                      Margin="78,0,0,0"
+                                                      />
+                                </DockPanel>
+                                
+                        </Border>
+                </StackPanel>
         </Grid>
+                <Button
+                        Content="エンコード開始"
+                        
+                        Margin="16,36,0,0"
+                        Background="#ffffff"
+                        Width="200"
+                        Height="60"
+                        CornerRadius="6"
+                        BorderThickness="1,1,1,2"
+                        BorderBrush="#ddd" />
         </StackPanel>
         
+
 </Window>
