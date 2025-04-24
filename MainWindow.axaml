@@ -98,10 +98,10 @@
                         <StackPanel Orientation="Horizontal" Spacing="16">
                                 <TextBlock Text="エンコード品質       "
                                            VerticalAlignment="Center"/>
-                                <RadioButton Content="1080p" GroupName="EncodeOption"/>
-                                <RadioButton Content="720p" GroupName="EncodeOption"/>
-                                <RadioButton Content="480p" GroupName="EncodeOption"/>
-                                <RadioButton Content="9.5MB" GroupName="EncodeOption"/>
+                                <RadioButton x:Name ="Radio1080p" Content="1080p" GroupName="EncodeOption"/>
+                                <RadioButton x:Name ="Radio720p" Content="720p" GroupName="EncodeOption"/>
+                                <RadioButton x:Name ="Radio480p" Content="480p" GroupName="EncodeOption"/>
+                                <RadioButton x:Name ="Radio9_5MB" Content="9.5MB" GroupName="EncodeOption"/>
                         </StackPanel>
                 </Border>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
@@ -118,7 +118,7 @@
                                 <DockPanel VerticalAlignment="Center" Margin="0,0">
                                         <TextBlock Text="NVENCを使用する"
                                                    VerticalAlignment="Center"/>
-                                        <ToggleSwitch x:Name="NVEncS"
+                                        <ToggleSwitch x:Name="NvencSwitch"
                                                       IsChecked="True"
                                                       VerticalAlignment="Stretch"
                                                       HorizontalAlignment="Right"
@@ -138,7 +138,7 @@
                                 <DockPanel VerticalAlignment="Center" Margin="0,0">
                                         <TextBlock Text="自動エンコード"
                                                    VerticalAlignment="Center"/>
-                                        <ToggleSwitch x:Name="AutoES"
+                                        <ToggleSwitch x:Name="AutoEncodeSwitch"
                                                       IsChecked="True"
                                                       VerticalAlignment="Stretch"
                                                       HorizontalAlignment="Right"
@@ -151,7 +151,7 @@
         </Grid>
                 <Button
                         Content="エンコード開始"
-                        
+                        Click="OnEncodeStart"
                         Margin="16,36,0,0"
                         Background="#ffffff"
                         Width="200"
