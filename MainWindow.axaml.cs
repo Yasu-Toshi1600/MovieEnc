@@ -1,16 +1,16 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using Avalonia.Input;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Avalonia.Platform.Storage;
-using System.Diagnostics;
+using Avalonia.Controls.Notifications;
+
 
 namespace SampleApp;
 
@@ -23,6 +23,7 @@ public partial class MainWindow : Window
         this.Closing += SaveConfig;//終了時config保存呼び出し
         Console.OutputEncoding = Encoding.GetEncoding("utf-8"); //これ無いと文字化けする
         
+        //configロード
         var config = ConfigManager.Load();
         //保存パス読み込み
         FolderPathTextBox.Text = config.OutputFolder ?? "";
@@ -63,6 +64,7 @@ public partial class MainWindow : Window
         ConfigManager.Save(config);
     }
 
+    //Mode保存
     private string? GetSelectedEncodingMode()
     {
         if (Radio1080p.IsChecked == true) return "Radio1080p";
@@ -76,10 +78,13 @@ public partial class MainWindow : Window
     //MEconfig.json定義
     public class AppConfig
     {
+        public int Audiobitrate { get; set; }
+        public int Videobitrate { get; set; }
         public string? OutputFolder { get; set; }
         public string? SelectedEncodingMode { get; set; }
         public bool UseNvenc { get; set; }
         public bool UseAutoE { get; set; }
+        
     }
     
     //config設定
@@ -95,7 +100,7 @@ public partial class MainWindow : Window
             File.WriteAllText(ConfigPath, json);
         }
 
-        //configロード
+        //
         public static AppConfig Load()
         {
             if (!File.Exists(ConfigPath))
@@ -107,7 +112,7 @@ public partial class MainWindow : Window
     }
 
     //動画情報取得
-    public async Task <(int width, int height, double duration)> get_video_info(String filePath)
+    public async Task <(double duration, Boolean vertical)> get_video_info(String filePath)
     {
         var psi = new ProcessStartInfo
         {
@@ -136,12 +141,14 @@ public partial class MainWindow : Window
             double duration = double.TryParse(durationStr, out var d) ? d : 0;
             duration = Math.Round(duration, 1);
             
-            Console.WriteLine($"解像度: {width}x{height}, 時間: {duration} 秒");
-            return (width, height, duration);
+            bool vertical = width < height; //縦長ならtrue
+            
+            Console.WriteLine($"解像度: {width}x{height}, 時間: {duration} 秒, 縦長: {vertical}");
+            return (duration,vertical);
         }
         catch
         {
-            return (0, 0, 0);
+            return ( 0,false);
         }
     }
 
@@ -163,11 +170,15 @@ public partial class MainWindow : Window
         if (result != null && result.Length > 0)
         {
             FilePathTextBox.Text = result[0];
+            if (AutoEncodeSwitch.IsChecked == true)
+            {
+                OnEncodeStart(this, new RoutedEventArgs());
+            }
         }
     }
     
     //動画ドロップ処理
-    private async void DropFile(object? sender, DragEventArgs e)
+    private void DropFile(object? sender, DragEventArgs e)
     {
         Console.WriteLine("DropFile fired！");
 
@@ -178,6 +189,10 @@ public partial class MainWindow : Window
         {
             Console.WriteLine($"ドロップファイル: {file}");
             FilePathTextBox.Text = file;
+            if (AutoEncodeSwitch.IsChecked == true)
+            {
+                OnEncodeStart(this, new RoutedEventArgs());
+            }
         }
     }
     
@@ -200,11 +215,118 @@ public partial class MainWindow : Window
     //本処理
     private async void OnEncodeStart(object? sender, RoutedEventArgs e)
     {
+        var config = ConfigManager.Load();
         // 入力と出力のパスをここで取得（例として仮のパスを使用）
+        int AudioBitrate = config.Audiobitrate;
+        int VideoBitrate = config.Videobitrate;
         var inputPath = FilePathTextBox.Text;
         var outputPath = FolderPathTextBox.Text;
-        var (width, height, duration) = await get_video_info(inputPath);
+        String mode = GetSelectedEncodingMode();
+        var (duration,vertical) = await get_video_info(inputPath);
         var outputname = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(inputPath)!, "output.mp4");
+        var scalingFilter = "";
+        var resolutionStr = "";
+        var useBitrate = false;
+        
+        List<String> command = new List<string>
+        {
+            "ffmpeg", "-i", inputPath,
+        };
+        
+        //Nvencの使用を確認
+        bool useNvenc = NvencSwitch.IsChecked == true;
+        string codec = useNvenc ? "h264_nvenc" : "libx264";
+        
+        //解像度入力
+        if (mode == "radio_1080p" || mode == "radio720p" || mode == "radio480p")
+        {
+            Dictionary<string, string> presets;
+            if (vertical)
+            {
+                presets = new Dictionary<string, string>
+                {
+                    { "Radio480p", "480:-1" },
+                    { "Radio720p", "720:-1" },
+                    { "Radio1080p", "1080:-1" }
+                };
+            }
+            else
+            {
+                presets = new Dictionary<string, string>
+                {
+                    { "Radio480p", "854:480" },
+                    { "Radio720p", "1280:720" },
+                    { "Radio1080p", "1920:1080" }
+                };
+            }
+            scalingFilter = $"scale={presets[mode]}";
+            resolutionStr = mode;
+            useBitrate = false;
+        }
+        else if (mode == "Radio9.5MB")
+        {
+            scalingFilter = vertical ? "scale=360:-1" : "scale=640:360";
+            resolutionStr = mode;
+            useBitrate = true;
+        }
+        
+        if (!string.IsNullOrEmpty(scalingFilter))
+        {
+            command.AddRange(new[] { "-vf", scalingFilter });
+        }
+
+        if (useBitrate)
+        {
+            long targetSizeBits =  VideoBitrate* 1000 * 1000 * 8;
+            double audioTotalBits = AudioBitrate * duration;
+            double videoTotalBits = targetSizeBits - audioTotalBits;
+
+            if (videoTotalBits <= 0)
+            {
+                
+                return;
+            }
+
+            double videoBitrateBps = videoTotalBits / duration;
+            int videoBitrateKbps = (int)(videoBitrateBps / 1000);
+
+            if (videoBitrateKbps <= 0)
+            {
+                //MessageBox.Show("計算されたビットレートが不正です。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (useNvenc)
+            {
+                command.AddRange(new[] { "-b:v", $"{videoBitrateKbps}k", "-c:v", "h264_nvenc", "-preset", "slow" });
+            }
+            else
+            {
+                command.AddRange(new[] { "-b:v", $"{videoBitrateKbps}k", "-c:v", "libx264", "-preset", "slow" });
+            }
+        }
+        else
+        {
+            // CRF（品質優先）
+            if (useNvenc)
+            {
+                command.AddRange(new[] { "-c:v", "h264_nvenc", "-preset", "slow", "-cq", "23" });
+            }
+            else
+            {
+                command.AddRange(new[] { "-c:v", "libx264", "-preset", "slow", "-crf", "23" });
+            }
+        }
+
+// 共通オーディオ設定
+        command.AddRange(new[]
+        {
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ar", "44100",
+            outputPath
+        });
+        
         
         if (!File.Exists(inputPath) || !Directory.Exists(outputPath))
         {
@@ -212,9 +334,8 @@ public partial class MainWindow : Window
             return;
         }
         
-        string mode = GetSelectedEncodingMode() ?? "Fast";
-        bool useNvenc = NvencSwitch.IsChecked == true;
-        string codec = useNvenc ? "h264_nvenc" : "libx264";
+        
+        
         
         var ffmpegPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
         

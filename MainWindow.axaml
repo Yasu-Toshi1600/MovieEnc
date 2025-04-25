@@ -40,7 +40,6 @@
                                                 Background="#ffffff"
                                                 BorderThickness="1,1,1,2"
                                                 CornerRadius="6"
-                                                
                                                 BorderBrush="#ddd"
                                                 HorizontalContentAlignment="Center"/>
                                 </DockPanel>
@@ -151,14 +150,19 @@
         </Grid>
                 <Button
                         Content="エンコード開始"
+                        FontSize="30"
                         Click="OnEncodeStart"
                         Margin="16,36,0,0"
                         Background="#ffffff"
-                        Width="200"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Width="460"
                         Height="60"
                         CornerRadius="6"
                         BorderThickness="1,1,1,2"
-                        BorderBrush="#ddd" />
+                        BorderBrush="#ddd" 
+                        />
+                <WindowNotificationManager x:Name="ControlNotifications" />
         </StackPanel>
         
 
