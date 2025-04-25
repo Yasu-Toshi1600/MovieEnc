@@ -5,9 +5,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Avalonia.Input;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
+using System.Diagnostics;
 
 namespace SampleApp;
 
@@ -18,6 +21,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         AddHandler(DragDrop.DropEvent, DropFile);//ドロップ処理呼び出し
         this.Closing += SaveConfig;//終了時config保存呼び出し
+        Console.OutputEncoding = Encoding.GetEncoding("utf-8"); //これ無いと文字化けする
         
         var config = ConfigManager.Load();
         //保存パス読み込み
@@ -102,6 +106,45 @@ public partial class MainWindow : Window
         }
     }
 
+    //動画情報取得
+    public async Task <(int width, int height, double duration)> get_video_info(String filePath)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "ffprobe",
+            Arguments = $"-v error -select_streams v:0 -show_entries stream=width,height,duration -of json \"{filePath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        var process = new Process { StartInfo = psi };
+        process.Start();
+
+        string output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(output);
+            var stream = doc.RootElement.GetProperty("streams")[0];
+
+            int width = stream.GetProperty("width").GetInt32();
+            int height = stream.GetProperty("height").GetInt32();
+            string durationStr = stream.GetProperty("duration").GetString();
+            double duration = double.TryParse(durationStr, out var d) ? d : 0;
+            duration = Math.Round(duration, 1);
+            
+            Console.WriteLine($"解像度: {width}x{height}, 時間: {duration} 秒");
+            return (width, height, duration);
+        }
+        catch
+        {
+            return (0, 0, 0);
+        }
+    }
+
     //動画パス参照
     public async void file_ref(object sender, RoutedEventArgs args)
     {
@@ -124,7 +167,7 @@ public partial class MainWindow : Window
     }
     
     //動画ドロップ処理
-    private void DropFile(object? sender, DragEventArgs e)
+    private async void DropFile(object? sender, DragEventArgs e)
     {
         Console.WriteLine("DropFile fired！");
 
@@ -159,9 +202,26 @@ public partial class MainWindow : Window
     {
         // 入力と出力のパスをここで取得（例として仮のパスを使用）
         var inputPath = FilePathTextBox.Text;
-        var outputPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(inputPath)!, "output.mp4");
-
+        var outputPath = FolderPathTextBox.Text;
+        var (width, height, duration) = await get_video_info(inputPath);
+        var outputname = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(inputPath)!, "output.mp4");
+        
+        if (!File.Exists(inputPath) || !Directory.Exists(outputPath))
+        {
+            Console.WriteLine("入力ファイルまたは保存先が無効！");
+            return;
+        }
+        
+        string mode = GetSelectedEncodingMode() ?? "Fast";
+        bool useNvenc = NvencSwitch.IsChecked == true;
+        string codec = useNvenc ? "h264_nvenc" : "libx264";
+        
         var ffmpegPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
+        
+        Console.WriteLine("▶ 実行コマンド:");
+        Console.WriteLine($"\"{ffmpegPath}\" ");
+
+        
         var arguments = $"-i \"{inputPath}\" -c:v libx264 -crf 23 \"{outputPath}\"";
 
         var startInfo = new ProcessStartInfo
