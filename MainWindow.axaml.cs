@@ -18,6 +18,7 @@ namespace SampleApp;
 public partial class MainWindow : Window
 {
     private WindowNotificationManager _notifier;
+    private AppConfig loadedConfig;
 
     public MainWindow()
     {
@@ -68,14 +69,19 @@ public partial class MainWindow : Window
     //config保存
     private void SaveConfig(object? sender, WindowClosingEventArgs e)
     {
+        loadedConfig = ConfigManager.Load();
         var config = new AppConfig
         {
+            
             OutputFolder = FolderPathTextBox.Text,
             SelectedEncodeOption = GetSelectedEncodeOption(),
             UseNvenc = NvencSwitch.IsChecked == true,
             UseAutoE = AutoEncodeSwitch.IsChecked == true,
             WindowX = this.Position.X,
-            WindowY = this.Position.Y
+            WindowY = this.Position.Y,
+            Audiobitrate = loadedConfig.Audiobitrate, // もともと読み込んだ設定をそのまま保存
+            Videotargetcapacity = loadedConfig.Videotargetcapacity
+            
         };
         //config書き込み呼び出し
         ConfigManager.Save(config);
@@ -342,6 +348,7 @@ public partial class MainWindow : Window
             int videoBitrateKbps = await bitrate_calculation(duration,audioBitrate,videoCapacity);
             if (videoBitrateKbps <= 0)
             {
+                Console.WriteLine($"{scalingFilter} , {videoBitrateKbps}");
                 _notifier.Show(new Notification(
                     "エンコード失敗",
                     $"動画の時間が長すぎます",
