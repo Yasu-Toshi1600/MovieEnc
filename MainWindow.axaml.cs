@@ -25,11 +25,12 @@ public partial class MainWindow : Window
         
         //configロード
         var config = ConfigManager.Load();
+        
         //保存パス読み込み
         FolderPathTextBox.Text = config.OutputFolder ?? "";
 
         // エンコードモード読み込み（RadioButton）
-        switch (config.SelectedEncodingMode)
+        switch (config.SelectedEncodeOption)
         {
             case "Radio1080p":
                 Radio1080p.IsChecked = true;
@@ -56,38 +57,27 @@ public partial class MainWindow : Window
         var config = new AppConfig
         {
             OutputFolder = FolderPathTextBox.Text,
-            SelectedEncodingMode = GetSelectedEncodingMode(),
+            SelectedEncodeOption = GetSelectedEncodeOption(),
             UseNvenc = NvencSwitch.IsChecked == true,
             UseAutoE = AutoEncodeSwitch.IsChecked == true,
         };
         //config書き込み呼び出し
         ConfigManager.Save(config);
     }
-
-    //Mode保存
-    private string? GetSelectedEncodingMode()
-    {
-        if (Radio1080p.IsChecked == true) return "Radio1080p";
-        if (Radio720p.IsChecked == true) return "Radio720p";
-        if (Radio480p.IsChecked == true) return "Radio480p";
-        if (Radio9_5MB.IsChecked == true) return "Radio9_5MB";
-        
-        return null;
-    }
     
     //MEconfig.json定義
     public class AppConfig
     {
         public int Audiobitrate { get; set; }
-        public int Videobitrate { get; set; }
+        public double Video_target_capacity { get; set; }
         public string? OutputFolder { get; set; }
-        public string? SelectedEncodingMode { get; set; }
+        public string? SelectedEncodeOption { get; set; }
         public bool UseNvenc { get; set; }
         public bool UseAutoE { get; set; }
         
     }
     
-    //config設定
+    //config管理
     public static class ConfigManager
     {
         //configパス宣言
@@ -151,7 +141,35 @@ public partial class MainWindow : Window
             return ( 0,false);
         }
     }
+    
+    //ビットレート計算
+    public async Task <int> bitrate_calculation(double duration,int AudioBitrate,double VideoCapacity)
+    {
+        
+        long targetSizeBits =  (long)VideoCapacity* 1000 * 1000 * 8;
+        double audioTotalBits = AudioBitrate * duration;
+        double videoTotalBits = targetSizeBits - audioTotalBits;
 
+        if (videoTotalBits <= 0) return -1;
+        
+        int videoBitrateKbps = (int)(videoTotalBits / duration / 1000);
+
+        if (videoBitrateKbps <= 0) return -1;
+
+        return videoBitrateKbps;
+    }
+
+    //EncodeOption管理
+    private string? GetSelectedEncodeOption()
+    {
+        if (Radio1080p.IsChecked == true) return "Radio1080p";
+        if (Radio720p.IsChecked == true) return "Radio720p";
+        if (Radio480p.IsChecked == true) return "Radio480p";
+        if (Radio9_5MB.IsChecked == true) return "Radio9_5MB";
+        
+        return null;
+    }
+    
     //動画パス参照
     public async void file_ref(object sender, RoutedEventArgs args)
     {
@@ -216,29 +234,31 @@ public partial class MainWindow : Window
     private async void OnEncodeStart(object? sender, RoutedEventArgs e)
     {
         var config = ConfigManager.Load();
-        // 入力と出力のパスをここで取得（例として仮のパスを使用）
+        
         int AudioBitrate = config.Audiobitrate;
-        int VideoBitrate = config.Videobitrate;
+        double VideoCapacity = config.Video_target_capacity;
+        var ffmpegPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools","bin", "ffmpeg.exe");
         var inputPath = FilePathTextBox.Text;
         var outputPath = FolderPathTextBox.Text;
-        String mode = GetSelectedEncodingMode();
+        String mode = GetSelectedEncodeOption();
         var (duration,vertical) = await get_video_info(inputPath);
-        var outputname = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(inputPath)!, "output.mp4");
         var scalingFilter = "";
         var resolutionStr = "";
-        var useBitrate = false;
         
+        if (!File.Exists(inputPath) || !Directory.Exists(outputPath))
+        {
+            Console.WriteLine("入力ファイルまたは保存先が無効！");
+            return;
+        }
+        
+        //コマンド引数作成
         List<String> command = new List<string>
         {
-            "ffmpeg", "-i", inputPath,
+            "-i",$"\"{inputPath}\"",
         };
         
-        //Nvencの使用を確認
-        bool useNvenc = NvencSwitch.IsChecked == true;
-        string codec = useNvenc ? "h264_nvenc" : "libx264";
-        
-        //解像度入力
-        if (mode == "radio_1080p" || mode == "radio720p" || mode == "radio480p")
+        //解像度入力 
+        if (mode == "Radio1080p" || mode == "Radio720p" || mode == "Radio480p")
         {
             Dictionary<string, string> presets;
             if (vertical)
@@ -261,114 +281,99 @@ public partial class MainWindow : Window
             }
             scalingFilter = $"scale={presets[mode]}";
             resolutionStr = mode;
-            useBitrate = false;
-        }
-        else if (mode == "Radio9.5MB")
-        {
-            scalingFilter = vertical ? "scale=360:-1" : "scale=640:360";
-            resolutionStr = mode;
-            useBitrate = true;
-        }
-        
-        if (!string.IsNullOrEmpty(scalingFilter))
-        {
+            Console.WriteLine($"\"{scalingFilter}\" ");
             command.AddRange(new[] { "-vf", scalingFilter });
         }
-
-        if (useBitrate)
+        else if (mode == "Radio9_5MB")
         {
-            long targetSizeBits =  VideoBitrate* 1000 * 1000 * 8;
-            double audioTotalBits = AudioBitrate * duration;
-            double videoTotalBits = targetSizeBits - audioTotalBits;
-
-            if (videoTotalBits <= 0)
-            {
-                
-                return;
-            }
-
-            double videoBitrateBps = videoTotalBits / duration;
-            int videoBitrateKbps = (int)(videoBitrateBps / 1000);
-
+            scalingFilter = vertical ? "scale=360:-1" : "scale=640:360";
+            resolutionStr = "CS";
+            int videoBitrateKbps = await bitrate_calculation(duration,AudioBitrate,VideoCapacity);
             if (videoBitrateKbps <= 0)
             {
-                //MessageBox.Show("計算されたビットレートが不正です。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                //エラー書く
                 return;
             }
-
-            if (useNvenc)
-            {
-                command.AddRange(new[] { "-b:v", $"{videoBitrateKbps}k", "-c:v", "h264_nvenc", "-preset", "slow" });
-            }
-            else
-            {
-                command.AddRange(new[] { "-b:v", $"{videoBitrateKbps}k", "-c:v", "libx264", "-preset", "slow" });
-            }
-        }
-        else
-        {
-            // CRF（品質優先）
-            if (useNvenc)
-            {
-                command.AddRange(new[] { "-c:v", "h264_nvenc", "-preset", "slow", "-cq", "23" });
-            }
-            else
-            {
-                command.AddRange(new[] { "-c:v", "libx264", "-preset", "slow", "-crf", "23" });
-            }
-        }
-
-// 共通オーディオ設定
-        command.AddRange(new[]
-        {
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-ar", "44100",
-            outputPath
-        });
-        
-        
-        if (!File.Exists(inputPath) || !Directory.Exists(outputPath))
-        {
-            Console.WriteLine("入力ファイルまたは保存先が無効！");
-            return;
+            Console.WriteLine($"{scalingFilter} , {videoBitrateKbps}");
+            command.AddRange(new[] { "-vf", scalingFilter ,"-b:v", $"{videoBitrateKbps}k"});
         }
         
+        //Nvencの使用を確認
+        bool useNvenc = NvencSwitch.IsChecked == true;
+        if (mode == "Radio1080p" || mode == "Radio720p" || mode == "Radio480p")
+        {
+            if (useNvenc) //ビットレート未指定＆Nvenc使用
+            {
+                command.AddRange(new[] { "-c:v", "h264_nvenc", "-preset", "medium", "-cq", "23" });
+            }
+            else //ビットレート未指定&Nvenc未使用
+            {
+                command.AddRange(new[] { "-c:v", "libx264", "-preset", "medium", "-crf", "23" });
+            }
+            
+        }
+        else if (mode == "Radio9_5MB")
+            if (useNvenc) //ビットレート指定＆Nvenc使用
+            {
+                command.AddRange(new[] { "-c:v", "h264_nvenc", "-preset", "slow"});
+            }
+            else //ビットレート指定&Nvenc未使用
+            {
+                command.AddRange(new[] { "-c:v", "libx264", "-preset", "slower"});
+            }
+        
+        //出力ファイル処理
+        String Filename = Path.GetFileNameWithoutExtension(inputPath);
+        String extension = ".mp4";
+        String outputFilename = Path.Combine(outputPath, Filename + extension);
         
         
+        // 共通オーディオ設定&出力ファイル設定
+        int AudioBitRate = AudioBitrate / 1000;
+        command.AddRange(new[] { "-c:a", "aac", "-b:a", $"{AudioBitRate}k", "-ar", "44100",  $"\"{outputFilename}\""});
         
-        var ffmpegPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
+        Console.WriteLine(string.Join(" ", command));
         
-        Console.WriteLine("▶ 実行コマンド:");
-        Console.WriteLine($"\"{ffmpegPath}\" ");
+        string arguments = string.Join(" ", command);
 
-        
-        var arguments = $"-i \"{inputPath}\" -c:v libx264 -crf 23 \"{outputPath}\"";
-
-        var startInfo = new ProcessStartInfo
+        var psi = new ProcessStartInfo
         {
             FileName = ffmpegPath,
             Arguments = arguments,
-            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            CreateNoWindow = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
+
+        
+        using var process = new Process { StartInfo = psi };
 
         try
         {
-            using var process = new Process { StartInfo = startInfo };
-            process.Start();
+            bool started = process.Start();
+            if (!started)
+            {
+                Console.WriteLine("Process failed to start.");
+                return;
+            }
 
-            string errorLog = await process.StandardError.ReadToEndAsync(); // エラーログ見るなら
-            await process.WaitForExitAsync();
-
-            Console.WriteLine("変換完了！");
+            Console.WriteLine($"Process started! PID: {process.Id}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"エラー: {ex.Message}");
+            Console.WriteLine("プロセス起動エラー: " + ex.Message);
         }
+
+        process.Start();
+
+        string output = await process.StandardOutput.ReadToEndAsync();
+        string error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        Console.WriteLine("出力: " + output);
+        Console.WriteLine("エラー: " + error);
+        
     }
 
     
