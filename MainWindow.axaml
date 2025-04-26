@@ -5,6 +5,7 @@
         mc:Ignorable="d" d:DesignWidth="490" d:DesignHeight="490"
         x:Class="SampleApp.MainWindow"
         Width="493"
+        Height="550"
         Title="SampleApp"
         Background="#f3f3f3">
         <StackPanel>
@@ -31,7 +32,7 @@
                                 <DockPanel Margin="0,8,0,0">
                                         <TextBox x:Name="FilePathTextBox" 
                                                 Width="350" 
-                                                IsReadOnly="True"
+                                                IsReadOnly="False"
                                         />
                                         <Button Content="参照" 
                                         Click="file_ref" 
@@ -59,7 +60,7 @@
                                 <DockPanel Margin="0,8,0,0">
                                         <TextBox x:Name="FolderPathTextBox" 
                                                 Width="350" 
-                                                IsReadOnly="True"/>
+                                                IsReadOnly="False"/>
                                         <Button Content="参照" 
                                                 Click="folder_ref"
                                                 Background="#ffffff"
@@ -97,7 +98,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="16">
                                 <TextBlock Text="エンコード品質       "
                                            VerticalAlignment="Center"/>
-                                <RadioButton x:Name ="Radio1080p" Content="1080p" GroupName="EncodeOption"/>
+                                <RadioButton x:Name ="Radio1080p" Content="1080p" GroupName="EncodeOption" />
                                 <RadioButton x:Name ="Radio720p" Content="720p" GroupName="EncodeOption"/>
                                 <RadioButton x:Name ="Radio480p" Content="480p" GroupName="EncodeOption"/>
                                 <RadioButton x:Name ="Radio9_5MB" Content="9.5MB" GroupName="EncodeOption"/>
@@ -149,12 +150,13 @@
                 </StackPanel>
         </Grid>
                 <Button
-                        Content="エンコード開始"
+                        Content="エンコード開始            > "
                         FontSize="30"
                         Click="OnEncodeStart"
-                        Margin="16,36,0,0"
-                        Background="#ffffff"
-                        HorizontalContentAlignment="Center"
+                        Margin="16,16,0,0"
+                        Background="#187bcc"
+                        
+                        HorizontalContentAlignment="Right"
                         VerticalContentAlignment="Center"
                         Width="460"
                         Height="60"
