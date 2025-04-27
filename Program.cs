@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using System;
+using MovieEnc;
 
 namespace SampleApp;
 

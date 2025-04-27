@@ -3,10 +3,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="490" d:DesignHeight="490"
-        x:Class="SampleApp.MainWindow"
+        x:Class="MovieEnc.MainWindow"
         Width="493"
-        Height="550"
-        Title="SampleApp"
+        Height="590"
+        Title="MovieEnc_v2.0.0"
         Background="#f3f3f3">
         <StackPanel>
         <Grid >
@@ -150,17 +150,18 @@
                 </StackPanel>
         </Grid>
                 <Button
-                        Content="エンコード開始            > "
-                        FontSize="30"
+                        Content="エンコード開始"
+                        FontSize="32"
                         Click="OnEncodeStart"
                         Margin="16,16,0,0"
-                        Background="#187bcc"
-                        
-                        HorizontalContentAlignment="Right"
+                        Background="#58c8d2"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Width="460"
-                        Height="60"
-                        CornerRadius="6"
+                        Height="80"
+                        CornerRadius="12"
                         BorderThickness="1,1,1,2"
                         BorderBrush="#ddd" 
                         />

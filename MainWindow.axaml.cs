@@ -13,7 +13,7 @@ using Avalonia;
 using Avalonia.Controls.Notifications;
 
 
-namespace SampleApp;
+namespace MovieEnc;
 
 public partial class MainWindow : Window
 {
@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         _notifier = new WindowNotificationManager(this)
         {
             Position = NotificationPosition.BottomRight,
-            MaxItems = 3
+            MaxItems = 1
         };
         //configロード
         var config = ConfigManager.Load();
@@ -143,9 +143,10 @@ public partial class MainWindow : Window
     //動画情報取得
     public async Task <(double duration, Boolean vertical)> get_video_info(String filePath)
     {
+        var ffprobePath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools","bin", "ffprobe.exe");
         var psi = new ProcessStartInfo
         {
-            FileName = "ffprobe",
+            FileName = ffprobePath,
             Arguments = $"-v error -select_streams v:0 -show_entries stream=width,height,duration -of json \"{filePath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -391,6 +392,13 @@ public partial class MainWindow : Window
         String extension = ".mp4";
         String outputFilename = Path.Combine(outputPath, filename + extension);
         
+        int counter = 1;
+        while (File.Exists(outputFilename))
+        {
+            outputFilename = Path.Combine(outputPath, $"{filename}_{counter}{extension}");
+            counter++;
+        }
+        
         
         // 共通オーディオ設定&出力ファイル設定
         int audioBitRate = audioBitrate / 1000;
@@ -446,7 +454,7 @@ public partial class MainWindow : Window
             _notifier.Show(new Notification(
                 "エンコード失敗",
                 $"エラーが発生しました",
-                NotificationType.Success
+                NotificationType.Error
             ));
         }
 

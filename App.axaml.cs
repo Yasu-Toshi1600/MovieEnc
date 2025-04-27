@@ -1,8 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using MovieEnc;
 
-namespace SampleApp;
+namespace MovieEnc;
 
 public partial class App : Application
 {
