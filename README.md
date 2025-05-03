@@ -15,11 +15,11 @@ GUI から FFmpeg を呼び出し、CPU または NVENC  による高速変換�
 1. 以下のいずれかの方法で、FFmpeg をダウンロードしてください：
     - https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip から直接ダウンロード
     - https://www.gyan.dev/ffmpeg/builds/ から 「Release builds」の```ffmpeg-release-essentials.zip```を選択
-3. GitHub のリリース欄から `MovieEnc_v2.0.3.zip` をダウンロード
-4. `ffmpeg-7.1.1-essentials_build.zip`と`MovieEnc_v2.0.3.zip` を解凍してください
-5. `ffmpeg-7.1.1-essentials_build\ffmpeg-7.1.1-essentials_build\bin` の `ffmpeg.exe` と `ffprobe.exe` を、`MovieEnc_v2.0.3\MovieEnc_v2.0.3\MovieEnc\Tools` の中にコピー
+2. GitHub のリリース欄から `MovieEnc_v2.0.3.zip` をダウンロード
+3. `ffmpeg-7.1.1-essentials_build.zip`と`MovieEnc_v2.0.3.zip` を解凍してください
+4. `ffmpeg-7.1.1-essentials_build\ffmpeg-7.1.1-essentials_build\bin` の `ffmpeg.exe` と `ffprobe.exe` を、`MovieEnc_v2.0.3\Tools` の中にコピー
 <p align="center">
- <img src="https://github.com/user-attachments/assets/4d8d364f-7bca-4178-be8f-46b33189ba81" width="500" >
+ <img src="https://github.com/user-attachments/assets/1d3d0ed4-772c-4e4e-9dcd-2dbe4aa8f7fa" width="500" >
 </p>
 5. この状態になればセットアップ完了です
 
