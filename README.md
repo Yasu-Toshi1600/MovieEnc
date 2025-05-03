@@ -1,29 +1,39 @@
 <h1>MovieEncについて</h1>
-本アプリはFFmpegを使用したWindows11向けの動画変換ツールです。<br>
-GUI から FFmpeg を呼び出し、CPUまたはNVENC による高速変換をサポートしています。
+本アプリは FFmpeg を使用したWindows 11向けの動画変換ツールです。<br>
+GUI から FFmpeg を呼び出し、CPU または NVENC  による高速変換をサポートしています。
 
 ## 主な機能
-- 解像度または容量指定による動画のエンコード
-- 対応ファイルは  ```.mp4```  ```.mkv```  ```.avi```に対応
-- 対応コーデックは ```h.264```
-- 動画ファイルのドラッグ&ドロップに対応
-- CPUまたはNVENCによる高速変換
-- エラー発生時は通知でお知らせ
-- 設定は自動で保存され、次回起動時に自動で読み込まれます
+1. 解像度または容量指定による動画のエンコード
+2. 対応ファイル :  `.mp4`  `.mkv`  `.avi`
+3. 対応コーデック : `h.264`
+4. 動画ファイルのドラッグ&ドロップに対応
+5. CPU または NVENC による高速変換
+6. エラー発生時は通知でお知らせ
+7. 設定は自動で保存され、次回起動時に自動で読み込まれます
+
+## セットアップ方法
+1. 以下のいずれかの方法で、FFmpeg をダウンロードしてください：
+    - https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip から直接ダウンロード
+    - https://www.gyan.dev/ffmpeg/builds/ から 「Release builds」の```ffmpeg-release-essentials.zip```を選択
+3. GitHub のリリース欄から `MovieEnc_v2.0.3.zip` をダウンロード
+4. `ffmpeg-7.1.1-essentials_build.zip`と`MovieEnc_v2.0.3.zip` を解凍してください
+5. `ffmpeg-7.1.1-essentials_build\ffmpeg-7.1.1-essentials_build\bin` の `ffmpeg.exe` と `ffprobe.exe` を、`MovieEnc_v2.0.3\MovieEnc_v2.0.3\MovieEnc\Tools` の中にコピー
+<p align="center">
+ <img src="https://github.com/user-attachments/assets/4d8d364f-7bca-4178-be8f-46b33189ba81" width="500" >
+</p>
+5. この状態になればセットアップ完了です
 
 ## 使い方
-1. リリース欄から ```MovieEnc_v2.0.3.zip``` をダウンロード
-2. 解答して ```MovieEnc_v2.0.3``` を実行
-3. 対象の動画を参照または **動画ファイルを選択** の部分にドロップ
-4. 動画の保存先を参照から選択
-5. エンコード品質 NVENC使用の有無などを設定し**エンコード開始**を押すだけ
+1. `MovieEnc_v2.0.3` を実行
+2. 対象の動画を **参照** または **動画ファイルを選択** の部分にドロップ
+3. 動画の保存先を **参照** から選択
+4. エンコード品質・NVENC使用の有無などを設定し、**エンコード開始**を押すだけ
 
 ## 注意事項
-1. NVENCを使用する際はGPU Driverを **バージョン 572.70** 以上で使用してください
-2. 一部の古いGPUではNVENCが使えない可能性があります。
+1. NVENCを使用する際はGPU Driverを **バージョン 572.70以上** で使用してください
+2. 一部の古いGPUではNVENCが使えない可能性があります
 3. このソフトウェアはMITライセンスのもとで提供されています。  
-ご利用は自己責任でお願いします。
-
+ご利用は **自己責任** でお願いします。
 
 ## バージョン履歴
 
