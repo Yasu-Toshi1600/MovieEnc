@@ -24,15 +24,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AddHandler(DragDrop.DropEvent, DropFile);//ドロップ処理呼び出し
+        
+        AddHandler(DragDrop.DropEvent, DropFile);//ファイルドロップ処理呼び出し
+        
         this.Closing += SaveConfig;//終了時config保存呼び出し
+        
         Console.OutputEncoding = Encoding.GetEncoding("utf-8"); //これ無いと文字化けする
         
+        //通知設定
         _notifier = new WindowNotificationManager(this)
         {
             Position = NotificationPosition.BottomRight,
             MaxItems = 1
         };
+        
         //configロード
         var config = ConfigManager.Load();
         
@@ -42,7 +47,7 @@ public partial class MainWindow : Window
             this.Position = new PixelPoint(config.WindowX, config.WindowY);
         }
         
-        //保存パス読み込み
+        //保存先読み込み
         FolderPathTextBox.Text = config.OutputFolder ?? "";
 
         // エンコードモード読み込み（RadioButton）
@@ -271,8 +276,11 @@ public partial class MainWindow : Window
                 _notifier.Show(new Notification(
                     "エラー",
                     "対応していないファイル形式です（.mp4, .mkv, .aviのみ対応）",
-                    NotificationType.Error
-                ));
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
             }
         }
     }
@@ -316,9 +324,12 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"このPCではNVENCは使用できません。\n 詳細は{logPath}を確認してください。",
-                    NotificationType.Error
-                ));
+                    $"このPCではNVENCは使用できません。"+$"詳細は{logPath}を確認してください。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 foreach (var word in matchedKeywords)
                 {
                     Console.WriteLine($" - {word}");
@@ -329,9 +340,12 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"動画データが破損してる可能性があります。\n 詳細は{logPath}を確認してください。",
-                    NotificationType.Error
-                ));
+                    "動画データが破損してる可能性があります。"+$"詳細は{logPath}を確認してください。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 
                 Console.WriteLine("エラーメッセージ:");
                 foreach (var word in matchedKeywords)
@@ -344,9 +358,12 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"書き込み先のファイルにアクセス権限がありません。\n 詳細は{logPath}を確認してください。",
-                    NotificationType.Error
-                ));
+                    $"書き込み先のファイルにアクセス権限がありません。"+$"詳細は{logPath}を確認してください。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 
                 Console.WriteLine("エラーメッセージ:");
                 foreach (var word in matchedKeywords)
@@ -358,9 +375,12 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"エラーが発生しました。\n 詳細は{logPath}を確認してください。",
-                    NotificationType.Error
-                ));
+                    $"エラーが発生しました。"+$"詳細は{logPath}を確認してください。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 
                 Console.WriteLine("エラーメッセージ:");
                 foreach (var word in matchedKeywords)
@@ -405,8 +425,11 @@ public partial class MainWindow : Window
             _notifier.Show(new Notification(
                 "エンコード失敗",
                 $"入力ファイルまたは保存先が無効。",
-                NotificationType.Error
-            ));
+                NotificationType.Error)
+                {
+                    Expiration = TimeSpan.Zero
+                }
+            );
             return;
         }
         
@@ -454,16 +477,19 @@ public partial class MainWindow : Window
                 Console.WriteLine($"エンコード解像度: {scalingFilter}, ビットレート :{videoBitrateKbps}, 目標容量 :{videoCapacity}MB\n");
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"動画の時間が長すぎます。",
-                    NotificationType.Error
-                ));
+                    "動画の時間が長すぎます。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 return;
             }
             Console.WriteLine($"エンコード解像度: {scalingFilter}, ビットレート :{videoBitrateKbps}, 目標容量 :{videoCapacity}MB\n");
             command.AddRange(new[] { "-vf", scalingFilter ,"-b:v", $"{videoBitrateKbps}k"});
         }
         
-        //Nvencの使用を確認
+        //Nvencの関連
         bool useNvenc = NvencSwitch.IsChecked == true;
         if (mode == "Radio1080p" || mode == "Radio720p" || mode == "Radio480p")
         {
@@ -502,7 +528,7 @@ public partial class MainWindow : Window
         }
         
         
-        // 共通オーディオ設定&出力ファイル設定
+        // オーディオ設定&出力ファイル設定
         int audioBitRate = audioBitrate / 1000;
         command.AddRange(new[] { "-c:a", "aac", "-b:a", $"{audioBitRate}k", "-ar", "44100",  $"\"{outputFilename}\""});
         Console.WriteLine(string.Join(" ", command));
@@ -529,9 +555,12 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"エラーが発生しました。",
-                    NotificationType.Error
-                ));
+                    "エラーが発生しました。",
+                    NotificationType.Error)
+                    {
+                        Expiration = TimeSpan.Zero
+                    }
+                );
                 Console.WriteLine("\nProcess failed to start.");
                 return;
             }
@@ -566,8 +595,11 @@ public partial class MainWindow : Window
             _notifier.Show(new Notification(
                 "エンコード失敗",
                 $"エラーが発生しました。",
-                NotificationType.Error
-            ));
+                NotificationType.Error)
+                {
+                    Expiration = TimeSpan.Zero
+                }
+            );
         }
         finally
         {
@@ -575,3 +607,6 @@ public partial class MainWindow : Window
         }
     }
 }
+
+// resolutionStr 今後使用予定
+//Radio9_5MB もっと汎用的にする
