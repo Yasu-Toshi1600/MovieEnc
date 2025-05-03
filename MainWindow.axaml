@@ -149,7 +149,7 @@
                         </Border>
                 </StackPanel>
         </Grid>
-                <Button
+                <Button x:Name="EncodeStartButton"
                         Content="エンコード開始"
                         FontSize="32"
                         Click="OnEncodeStart"
@@ -164,7 +164,7 @@
                         CornerRadius="12"
                         BorderThickness="1,1,1,2"
                         BorderBrush="#ddd" 
-                        />
+                />
                 <WindowNotificationManager x:Name="ControlNotifications" />
         </StackPanel>
         

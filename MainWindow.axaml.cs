@@ -178,6 +178,7 @@ public partial class MainWindow : Window
             bool vertical = width < height; //縦長ならtrue
             
             Console.WriteLine($"解像度: {width}x{height}, 時間: {duration} 秒, 縦長: {vertical}");
+            
             return (duration,vertical);
         }
         catch
@@ -299,8 +300,6 @@ public partial class MainWindow : Window
         string logPath = Path.Combine(AppContext.BaseDirectory, "Data", "ffmpeg_log.txt");
         string content = File.ReadAllText(logPath);
         var lowered = content.ToLower();
-        Console.WriteLine($"456{lowered}");
-        File.Delete(logPath);
         
         string[] errorKeywords = {
             "error", "invalid", "data found", "not found" , "not supported" ,
@@ -317,7 +316,7 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"このPCではNVENCは使用できません",
+                    $"このPCではNVENCは使用できません。\n 詳細は{logPath}を確認してください。",
                     NotificationType.Error
                 ));
                 foreach (var word in matchedKeywords)
@@ -330,23 +329,54 @@ public partial class MainWindow : Window
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"動画データが破損してる可能性があります",
+                    $"動画データが破損してる可能性があります。\n 詳細は{logPath}を確認してください。",
                     NotificationType.Error
                 ));
+                
+                Console.WriteLine("エラーメッセージ:");
+                foreach (var word in matchedKeywords)
+                {
+                    Console.WriteLine($" - {word}");
+                }
+            }
+            //書き込み権限なし
+            else if (matchedKeywords.Contains("permission") && matchedKeywords.Contains("denied"))
+            {
+                _notifier.Show(new Notification(
+                    "エンコード失敗",
+                    $"書き込み先のファイルにアクセス権限がありません。\n 詳細は{logPath}を確認してください。",
+                    NotificationType.Error
+                ));
+                
+                Console.WriteLine("エラーメッセージ:");
+                foreach (var word in matchedKeywords)
+                {
+                    Console.WriteLine($" - {word}");
+                }
+            }
+            else
+            {
+                _notifier.Show(new Notification(
+                    "エンコード失敗",
+                    $"エラーが発生しました。\n 詳細は{logPath}を確認してください。",
+                    NotificationType.Error
+                ));
+                
+                Console.WriteLine("エラーメッセージ:");
                 foreach (var word in matchedKeywords)
                 {
                     Console.WriteLine($" - {word}");
                 }
             }
             
-            Console.WriteLine("エラー発生");
-            Console.WriteLine(lowered); // 全文出力 or GUIに表示
+            Console.WriteLine("ログ:");
+            Console.WriteLine(lowered); //全文出力
             return false;
         }
         else
         {
-            Console.WriteLine("エンコード成功");
-            Console.WriteLine(lowered);
+            Console.WriteLine("エンコード成功 !");
+            //Console.WriteLine(lowered); //ログは無し
             return true;
         }
     }
@@ -365,12 +395,16 @@ public partial class MainWindow : Window
         var scalingFilter = "";
         var resolutionStr = ""; //今後使う予定
         
+        //エンコード中は無効化
+        EncodeStartButton.IsEnabled = false;
+        
+        //ファイルパス確認
         if (!File.Exists(inputPath) || !Directory.Exists(outputPath))
         {
             Console.WriteLine("入力ファイルまたは保存先が無効！");
             _notifier.Show(new Notification(
                 "エンコード失敗",
-                $"入力ファイルまたは保存先が無効",
+                $"入力ファイルまたは保存先が無効。",
                 NotificationType.Error
             ));
             return;
@@ -408,7 +442,7 @@ public partial class MainWindow : Window
                 };
             }
             scalingFilter = $"scale={presets[mode]}";
-            Console.WriteLine($"\"{scalingFilter}\" ");
+            Console.WriteLine($"エンコード解像度: {scalingFilter}\n");
             command.AddRange(new[] { "-vf", scalingFilter });
         }
         else if (mode == "Radio9_5MB")
@@ -417,15 +451,15 @@ public partial class MainWindow : Window
             int videoBitrateKbps = bitrate_calculation(duration,audioBitrate,videoCapacity);
             if (videoBitrateKbps <= 0)
             {
-                Console.WriteLine($"{scalingFilter} , {videoBitrateKbps}");
+                Console.WriteLine($"エンコード解像度: {scalingFilter}, ビットレート :{videoBitrateKbps}, 目標容量 :{videoCapacity}MB\n");
                 _notifier.Show(new Notification(
                     "エンコード失敗",
-                    $"動画の時間が長すぎます",
+                    $"動画の時間が長すぎます。",
                     NotificationType.Error
                 ));
                 return;
             }
-            Console.WriteLine($"ビットレート :{videoBitrateKbps}, 目標容量{videoCapacity}");
+            Console.WriteLine($"エンコード解像度: {scalingFilter}, ビットレート :{videoBitrateKbps}, 目標容量 :{videoCapacity}MB\n");
             command.AddRange(new[] { "-vf", scalingFilter ,"-b:v", $"{videoBitrateKbps}k"});
         }
         
@@ -486,17 +520,23 @@ public partial class MainWindow : Window
         };
         
         using var process = new Process { StartInfo = psi };
-
+        
         try
         {
+            //プロセス起動
             bool started = process.Start();
             if (!started)
             {
-                Console.WriteLine("Process failed to start.");
+                _notifier.Show(new Notification(
+                    "エンコード失敗",
+                    $"エラーが発生しました。",
+                    NotificationType.Error
+                ));
+                Console.WriteLine("\nProcess failed to start.");
                 return;
             }
-
-            Console.WriteLine($"Process started! PID: {process.Id}");
+            
+            Console.WriteLine($"\nProcess started! PID: {process.Id}");
 
             // ログ取得
             string logs = await process.StandardError.ReadToEndAsync();
@@ -505,9 +545,11 @@ public partial class MainWindow : Window
             await process.WaitForExitAsync();
 
             // リザルト取得
+            File.Delete("Data/ffmpeg_log.txt");
             File.WriteAllText("Data/ffmpeg_log.txt", logs);
             bool result = log_analysis();
             
+            //retultがtrueなら成功 falseの場合log_analysis確認
             if (result)
             {
                 _notifier.Show(new Notification(
@@ -515,8 +557,6 @@ public partial class MainWindow : Window
                     $"ファイル名: {outputFilename}\n保存先: {outputPath}",
                     NotificationType.Success
                 ));
-                Console.WriteLine("エンコード完了！");
-                Console.WriteLine("ログ: " + logs);
             }
              
         }
@@ -525,9 +565,13 @@ public partial class MainWindow : Window
             Console.WriteLine("プロセス起動エラー: " + ex.Message);
             _notifier.Show(new Notification(
                 "エンコード失敗",
-                $"エラーが発生しました",
+                $"エラーが発生しました。",
                 NotificationType.Error
             ));
+        }
+        finally
+        {
+            EncodeStartButton.IsEnabled = true;
         }
     }
 }
