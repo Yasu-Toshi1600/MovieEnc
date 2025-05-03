@@ -6,7 +6,7 @@
         x:Class="MovieEnc.MainWindow"
         Width="493"
         Height="590"
-        Title="MovieEnc_v2.0.1"
+        Title="MovieEnc_v2.0.2"
         Background="#f3f3f3">
         <StackPanel>
         <Grid >

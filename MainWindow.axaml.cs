@@ -106,11 +106,14 @@ public partial class MainWindow : Window
     public static class ConfigManager
     {
         //configパス宣言
-        private static readonly string ConfigPath = Path.Combine(AppContext.BaseDirectory, "MEconfig.json");
-
+        private static readonly string ConfigDir = Path.Combine(AppContext.BaseDirectory, "Data");
+        private static readonly string ConfigPath = Path.Combine(ConfigDir, "MEconfig.json");
+        
         //config書き込み
         public static void Save(AppConfig config)
         {
+            if (!Directory.Exists(ConfigDir))
+                Directory.CreateDirectory(ConfigDir);
             var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(ConfigPath, json);
         }
@@ -291,10 +294,14 @@ public partial class MainWindow : Window
     }
     
     //ログ処理
-    private bool log_analysis(String log)
+    private bool log_analysis()
     {
-        var lowered = log.ToLower();
-
+        string logPath = Path.Combine(AppContext.BaseDirectory, "Data", "ffmpeg_log.txt");
+        string content = File.ReadAllText(logPath);
+        var lowered = content.ToLower();
+        Console.WriteLine($"456{lowered}");
+        File.Delete(logPath);
+        
         string[] errorKeywords = {
             "error", "invalid", "data found", "not found" , "not supported" ,
             "failed", "unrecognized", "permission", "denied",
@@ -319,7 +326,7 @@ public partial class MainWindow : Window
                 }
             }
             //データ破損
-            else if (matchedKeywords.Contains("Iinvalid") && matchedKeywords.Contains("data found"))
+            else if (matchedKeywords.Contains("invalid") && matchedKeywords.Contains("data found"))
             {
                 _notifier.Show(new Notification(
                     "エンコード失敗",
@@ -333,11 +340,13 @@ public partial class MainWindow : Window
             }
             
             Console.WriteLine("エラー発生");
-            Console.WriteLine(log); // 全文出力 or GUIに表示
+            Console.WriteLine(lowered); // 全文出力 or GUIに表示
             return false;
         }
         else
         {
+            Console.WriteLine("エンコード成功");
+            Console.WriteLine(lowered);
             return true;
         }
     }
@@ -496,8 +505,9 @@ public partial class MainWindow : Window
             await process.WaitForExitAsync();
 
             // リザルト取得
-            bool result = log_analysis(logs);
-
+            File.WriteAllText("Data/ffmpeg_log.txt", logs);
+            bool result = log_analysis();
+            
             if (result)
             {
                 _notifier.Show(new Notification(
