@@ -3129,11 +3129,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\anxil\\Desktop\\MovieEnc\\MovieEnc.csproj",
+      "projectUniqueName": "C:\\Users\\anxil\\Desktop\\app\\MovieEnc\\MovieEnc_cs\\MovieEnc.csproj",
       "projectName": "MovieEnc",
-      "projectPath": "C:\\Users\\anxil\\Desktop\\MovieEnc\\MovieEnc.csproj",
+      "projectPath": "C:\\Users\\anxil\\Desktop\\app\\MovieEnc\\MovieEnc_cs\\MovieEnc.csproj",
       "packagesPath": "C:\\Users\\anxil\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\anxil\\Desktop\\MovieEnc\\obj\\",
+      "outputPath": "C:\\Users\\anxil\\Desktop\\app\\MovieEnc\\MovieEnc_cs\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

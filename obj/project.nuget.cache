@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "m0eOw7P3s28=",
+  "dgSpecHash": "LRHjtey5b8g=",
   "success": true,
-  "projectFilePath": "C:\\Users\\anxil\\Desktop\\MovieEnc\\MovieEnc.csproj",
+  "projectFilePath": "C:\\Users\\anxil\\Desktop\\app\\MovieEnc\\MovieEnc_cs\\MovieEnc.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\anxil\\.nuget\\packages\\avalonia\\11.2.7\\avalonia.11.2.7.nupkg.sha512",
     "C:\\Users\\anxil\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.22045.20230930\\avalonia.angle.windows.natives.2.1.22045.20230930.nupkg.sha512",

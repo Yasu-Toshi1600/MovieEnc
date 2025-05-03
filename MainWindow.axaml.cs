@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.Notifications;
+using Avalonia.Platform.Storage;
 
 
 namespace MovieEnc;
@@ -18,7 +19,7 @@ namespace MovieEnc;
 public partial class MainWindow : Window
 {
     private WindowNotificationManager _notifier;
-    private AppConfig loadedConfig;
+    private AppConfig _loadedConfig;
 
     public MainWindow()
     {
@@ -56,7 +57,7 @@ public partial class MainWindow : Window
             case "Radio480p":
                 Radio480p.IsChecked = true;
                 break;
-            case "Radio9_5MB":
+            case "Radio9_5MB"://将来名前を変更予定
                 Radio9_5MB.IsChecked = true;
                 break;
         }
@@ -69,7 +70,7 @@ public partial class MainWindow : Window
     //config保存
     private void SaveConfig(object? sender, WindowClosingEventArgs e)
     {
-        loadedConfig = ConfigManager.Load();
+        _loadedConfig = ConfigManager.Load();
         var config = new AppConfig
         {
             
@@ -79,15 +80,15 @@ public partial class MainWindow : Window
             UseAutoE = AutoEncodeSwitch.IsChecked == true,
             WindowX = this.Position.X,
             WindowY = this.Position.Y,
-            Audiobitrate = loadedConfig.Audiobitrate, // もともと読み込んだ設定をそのまま保存
-            Videotargetcapacity = loadedConfig.Videotargetcapacity
+            Audiobitrate = _loadedConfig.Audiobitrate, // もともと読み込んだ設定をそのまま保存
+            Videotargetcapacity = _loadedConfig.Videotargetcapacity
             
         };
         //config書き込み呼び出し
         ConfigManager.Save(config);
     }
     
-    //json変換
+    //json用
     public class AppConfig
     {
         public int Audiobitrate { get; set; }
@@ -114,7 +115,7 @@ public partial class MainWindow : Window
             File.WriteAllText(ConfigPath, json);
         }
 
-        //
+        //configロード
         public static AppConfig Load()
         {
             if (!File.Exists(ConfigPath))
@@ -140,10 +141,10 @@ public partial class MainWindow : Window
         }
     }
 
-    //動画情報取得
+    //動画情報確認
     public async Task <(double duration, Boolean vertical)> get_video_info(String filePath)
     {
-        var ffprobePath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools","bin", "ffprobe.exe");
+        var ffprobePath = Path.Combine(AppContext.BaseDirectory, "Tools", "ffprobe.exe");
         var psi = new ProcessStartInfo
         {
             FileName = ffprobePath,
@@ -183,10 +184,10 @@ public partial class MainWindow : Window
     }
     
     //ビットレート計算
-    public async Task <int> bitrate_calculation(double duration,int audioBitrate,double videoCapacity)
+    public int bitrate_calculation(double duration,int audioBitrate,double videoCapacity)
     {
         
-        long targetSizeBits =  (long)videoCapacity* 1000 * 1000 * 8;
+        long targetSizeBits =  (long)(videoCapacity* 1024 * 1024 * 8);
         double audioTotalBits = audioBitrate * duration;
         double videoTotalBits = targetSizeBits - audioTotalBits;
 
@@ -213,21 +214,26 @@ public partial class MainWindow : Window
     //動画パス参照
     public async void file_ref(object sender, RoutedEventArgs args)
     {
-        var dialog = new OpenFileDialog
+        var dialog = new FilePickerOpenOptions
         {
             Title = "動画ファイルを選択",
             AllowMultiple = false,
-            Filters =
+            FileTypeFilter = new[]
             {
-                new FileDialogFilter { Name = "動画ファイル", Extensions = { "mp4", "mkv", "avi" } }
+                new FilePickerFileType("動画ファイル")
+                {
+                    Patterns = new[] { "*.mp4", "*.mkv", "*.avi" }
+                }
             }
         };
 
-        var result = await dialog.ShowAsync(this);
+        var files = await StorageProvider.OpenFilePickerAsync(dialog);
 
-        if (result != null && result.Length > 0)
+        if (files is { Count: > 0 })
         {
-            FilePathTextBox.Text = result[0];
+            var file = files[0].Path.LocalPath; // 選択したファイルのパス
+            FilePathTextBox.Text = file;
+
             if (AutoEncodeSwitch.IsChecked == true)
             {
                 OnEncodeStart(this, new RoutedEventArgs());
@@ -238,8 +244,6 @@ public partial class MainWindow : Window
     //動画ドロップ処理
     private void DropFile(object? sender, DragEventArgs e)
     {
-        Console.WriteLine("DropFile fired！");
-
         var files = e.Data.GetFileNames();
         var file = files?.FirstOrDefault();
 
@@ -260,7 +264,7 @@ public partial class MainWindow : Window
             else
             {
                 Console.WriteLine("対応していないファイル形式です！");
-                _notifier?.Show(new Notification(
+                _notifier.Show(new Notification(
                     "エラー",
                     "対応していないファイル形式です（.mp4, .mkv, .aviのみ対応）",
                     NotificationType.Error
@@ -272,16 +276,69 @@ public partial class MainWindow : Window
     //保存パス参照
     public async void folder_ref(object sender, RoutedEventArgs args)
     {
-        var dialog = new OpenFolderDialog
+        var dialog = new FolderPickerOpenOptions
         {
             Title = "保存先フォルダを選択"
         };
 
-        var result = await dialog.ShowAsync(this);
+        var folder = await StorageProvider.OpenFolderPickerAsync(dialog);
 
-        if (!string.IsNullOrWhiteSpace(result))
+        if (folder is { Count: > 0 })
         {
-            FolderPathTextBox.Text = result;
+            var folderPath = folder[0].Path.LocalPath;
+            FolderPathTextBox.Text = folderPath;
+        }
+    }
+    
+    //ログ処理
+    private bool log_analysis(String log)
+    {
+        var lowered = log.ToLower();
+
+        string[] errorKeywords = {
+            "error", "invalid", "data found", "not found" , "not supported" ,
+            "failed", "unrecognized", "permission", "denied",
+            "cannot", "unable", "empty", "corrupt"
+        };
+
+        var matchedKeywords = errorKeywords.Where(k => lowered.Contains(k)).ToList();
+
+        if (matchedKeywords.Any())
+        {
+            //nvenc関連
+            if (matchedKeywords.Contains("nvenc") && (matchedKeywords.Contains("not found") || matchedKeywords.Contains("not supported")))
+            {
+                _notifier.Show(new Notification(
+                    "エンコード失敗",
+                    $"このPCではNVENCは使用できません",
+                    NotificationType.Error
+                ));
+                foreach (var word in matchedKeywords)
+                {
+                    Console.WriteLine($" - {word}");
+                }
+            }
+            //データ破損
+            else if (matchedKeywords.Contains("Iinvalid") && matchedKeywords.Contains("data found"))
+            {
+                _notifier.Show(new Notification(
+                    "エンコード失敗",
+                    $"動画データが破損してる可能性があります",
+                    NotificationType.Error
+                ));
+                foreach (var word in matchedKeywords)
+                {
+                    Console.WriteLine($" - {word}");
+                }
+            }
+            
+            Console.WriteLine("エラー発生");
+            Console.WriteLine(log); // 全文出力 or GUIに表示
+            return false;
+        }
+        else
+        {
+            return true;
         }
     }
     
@@ -292,11 +349,10 @@ public partial class MainWindow : Window
         
         int audioBitrate = config.Audiobitrate;
         double videoCapacity = config.Videotargetcapacity;
-        var ffmpegPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Tools","bin", "ffmpeg.exe");
+        var ffmpegPath = Path.Combine(AppContext.BaseDirectory, "Tools", "ffmpeg.exe");
         var inputPath = FilePathTextBox.Text;
         var outputPath = FolderPathTextBox.Text;
-        String mode = GetSelectedEncodeOption();
-        var (duration,vertical) = await get_video_info(inputPath);
+        String mode = GetSelectedEncodeOption() ?? "Radio1080p";
         var scalingFilter = "";
         var resolutionStr = ""; //今後使う予定
         
@@ -310,6 +366,9 @@ public partial class MainWindow : Window
             ));
             return;
         }
+        
+        //動画情報取得
+        var (duration,vertical) = await get_video_info(inputPath);
         
         //コマンド引数作成
         List<String> command = new List<string>
@@ -334,9 +393,9 @@ public partial class MainWindow : Window
             {
                 presets = new Dictionary<string, string>
                 {
-                    { "Radio480p", "854:480" },
-                    { "Radio720p", "1280:720" },
-                    { "Radio1080p", "1920:1080" }
+                    { "Radio480p", "-1:480" },
+                    { "Radio720p", "-1:720" },
+                    { "Radio1080p", "-1:1080" }
                 };
             }
             scalingFilter = $"scale={presets[mode]}";
@@ -345,8 +404,8 @@ public partial class MainWindow : Window
         }
         else if (mode == "Radio9_5MB")
         {
-            scalingFilter = vertical ? "scale=360:-1" : "scale=640:360";
-            int videoBitrateKbps = await bitrate_calculation(duration,audioBitrate,videoCapacity);
+            scalingFilter = vertical ? "scale=360:-1" : "scale=-1:360";
+            int videoBitrateKbps = bitrate_calculation(duration,audioBitrate,videoCapacity);
             if (videoBitrateKbps <= 0)
             {
                 Console.WriteLine($"{scalingFilter} , {videoBitrateKbps}");
@@ -357,7 +416,7 @@ public partial class MainWindow : Window
                 ));
                 return;
             }
-            Console.WriteLine($"{scalingFilter} , {videoBitrateKbps}");
+            Console.WriteLine($"ビットレート :{videoBitrateKbps}, 目標容量{videoCapacity}");
             command.AddRange(new[] { "-vf", scalingFilter ,"-b:v", $"{videoBitrateKbps}k"});
         }
         
@@ -403,11 +462,10 @@ public partial class MainWindow : Window
         // 共通オーディオ設定&出力ファイル設定
         int audioBitRate = audioBitrate / 1000;
         command.AddRange(new[] { "-c:a", "aac", "-b:a", $"{audioBitRate}k", "-ar", "44100",  $"\"{outputFilename}\""});
-        
         Console.WriteLine(string.Join(" ", command));
         
+        //実行準備
         string arguments = string.Join(" ", command);
-
         var psi = new ProcessStartInfo
         {
             FileName = ffmpegPath,
@@ -431,22 +489,26 @@ public partial class MainWindow : Window
 
             Console.WriteLine($"Process started! PID: {process.Id}");
 
-            // 先に非同期でエラー出力を読む
-            Task<string> errorTask = process.StandardError.ReadToEndAsync();
+            // ログ取得
+            string logs = await process.StandardError.ReadToEndAsync();
 
             // プロセス終了を待つ
             await process.WaitForExitAsync();
 
-            // エラーログを取得
-            string error = await errorTask;
+            // リザルト取得
+            bool result = log_analysis(logs);
 
-            Console.WriteLine("ログ: " + error);
-            _notifier.Show(new Notification(
-                "エンコード成功",
-                $"ファイル名: {outputFilename}\n保存先: {outputPath}",
-                NotificationType.Success
-            ));
-            Console.WriteLine("エンコード完了！");
+            if (result)
+            {
+                _notifier.Show(new Notification(
+                    "エンコード成功",
+                    $"ファイル名: {outputFilename}\n保存先: {outputPath}",
+                    NotificationType.Success
+                ));
+                Console.WriteLine("エンコード完了！");
+                Console.WriteLine("ログ: " + logs);
+            }
+             
         }
         catch (Exception ex)
         {
@@ -457,8 +519,5 @@ public partial class MainWindow : Window
                 NotificationType.Error
             ));
         }
-
-
-        
     }
 }
