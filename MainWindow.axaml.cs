@@ -42,7 +42,7 @@ public partial class MainWindow : Window
         var config = ConfigManager.Load();
         
         //ウィンドウ位置読み込み
-        if (config.WindowX != 0 || config.WindowY != 0) // (0,0)はデフォルトだから無視
+        if (config.WindowX != 0 || config.WindowY != 0) 
         {
             this.Position = new PixelPoint(config.WindowX, config.WindowY);
         }
@@ -132,7 +132,7 @@ public partial class MainWindow : Window
                 var defaultConfig = new AppConfig
                 {
                     Audiobitrate = 128000,
-                    Videotargetcapacity = 9.2,
+                    Videotargetcapacity = 9.5,
                     OutputFolder = "",
                     SelectedEncodeOption = "Radio1080p",
                     UseNvenc = false,
@@ -195,7 +195,11 @@ public partial class MainWindow : Window
     //ビットレート計算
     public int bitrate_calculation(double duration,int audioBitrate,double videoCapacity)
     {
-        
+        bool useNvenc = NvencSwitch.IsChecked == true;
+        if (useNvenc)
+        {
+            videoCapacity = videoCapacity - 0.6;
+        }
         long targetSizeBits =  (long)(videoCapacity* 1024 * 1024 * 8);
         double audioTotalBits = audioBitrate * duration;
         double videoTotalBits = targetSizeBits - audioTotalBits;
@@ -413,7 +417,7 @@ public partial class MainWindow : Window
         var outputPath = FolderPathTextBox.Text;
         String mode = GetSelectedEncodeOption() ?? "Radio1080p";
         var scalingFilter = "";
-        var resolutionStr = ""; //今後使う予定
+        var resolutionStr = "";
         
         //エンコード中は無効化
         EncodeStartButton.IsEnabled = false;
@@ -515,15 +519,27 @@ public partial class MainWindow : Window
             }
         }
 
-        //出力ファイル処理
+        //出力ファイル関連
         String filename = Path.GetFileNameWithoutExtension(inputPath);
         String extension = ".mp4";
-        String outputFilename = Path.Combine(outputPath, filename + extension);
+        Dictionary<string, string> resolution;
         
+        resolution = new Dictionary<string, string>
+        {
+            { "Radio9_5MB", "9.5MB"},
+            { "Radio480p", "480p" },
+            { "Radio720p", "720p" },
+            { "Radio1080p", "1080p" }
+        };
+        
+        resolutionStr = resolution[mode];
+        String outputFilename = Path.Combine(outputPath, filename + "_" +resolutionStr + extension);
+        
+        //重複ファイル処理
         int counter = 1;
         while (File.Exists(outputFilename))
         {
-            outputFilename = Path.Combine(outputPath, $"{filename}_{counter}{extension}");
+            outputFilename = Path.Combine(outputPath, filename + "_" +resolutionStr + "_" + counter + extension);
             counter++;
         }
         
@@ -608,5 +624,4 @@ public partial class MainWindow : Window
     }
 }
 
-// resolutionStr 今後使用予定
 //Radio9_5MB もっと汎用的にする
